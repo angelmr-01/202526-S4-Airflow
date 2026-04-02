@@ -1,3 +1,13 @@
+# Common environment variables for Hadoop services
+x-hadoop-common: &hadoop-common
+  user: root
+  environment:
+    HADOOP_HOME: /opt/hadoop
+    HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
+  networks:
+    - airflow_network
+
+
 networks:
   airflow_network:
     driver: bridge
@@ -5,6 +15,8 @@ networks:
 volumes:
   airflow-logs:
   postgres-db:
+  namenode_data:
+  datanode_data:
 
 services:
   postgres:
@@ -27,6 +39,7 @@ services:
     networks:
       - airflow_network
 
+  # ==================== KAFKA STACK ====================
   kafka:
     image: confluentinc/cp-kafka:7.9.0
     container_name: kafka
@@ -36,8 +49,8 @@ services:
       - KAFKA_PROCESS_ROLES=broker,controller
       - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:29093
-      - KAFKA_LISTENERS=PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      - KAFKA_LISTENERS=PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
       - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
@@ -45,10 +58,145 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_HEAP_OPTS=-Xmx512m -Xms256m
     ports:
       - "9092:9092"
+      - "9093:9093"
     networks:
       - airflow_network
+
+
+  kafka-connect:
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka-connect
+    container_name: kafka-connect
+    hostname: kafka-connect
+    depends_on:
+      - kafka
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: connect-cluster
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+    ports:
+      - "8083:8083"
+    networks:
+      - airflow_network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    hostname: kafka-ui
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - airflow_network
+
+  # ==================== HADOOP HDFS ====================
+  
+  namenode:
+    <<: *hadoop-common
+    image: apache/hadoop:3.4.1
+    container_name: namenode
+    hostname: namenode
+    volumes:
+      - namenode_data:/opt/hadoop/data/nameNode
+      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro
+      - ./scripts/start-hdfs.sh:/start-hdfs.sh:ro
+    ports:
+      - "9870:9870"  # NameNode Web UI
+      - "9000:9000"  # HDFS
+    command: ["/bin/bash", "/start-hdfs.sh"]
+
+  # Nodos de almacenamiento de HDFS
+  datanode1:
+    build: .
+    container_name: datanode1
+    hostname: datanode1
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./hadoop_datanode1:/opt/hadoop/data/dataNode
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./scripts/init-datanode.sh:/init-datanode.sh
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/init-datanode.sh"]
+    networks:
+      - airflow_network
+
+  datanode2:
+    build: .
+    container_name: datanode2
+    hostname: datanode2
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./hadoop_datanode2:/opt/hadoop/data/dataNode
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./scripts/init-datanode.sh:/init-datanode.sh
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/init-datanode.sh"]
+    networks:
+      - airflow_network
+
+
+
+  # ==================== HADOOP YARN ====================
+  
+  resourcemanager:
+    <<: *hadoop-common
+    build: .
+    container_name: resourcemanager
+    hostname: resourcemanager
+    volumes:
+      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro
+      - ./scripts/start-yarn.sh:/start-yarn.sh:ro
+    ports:
+      - "8088:8088"  # YARN Web UI
+      - "8030:8030"
+      - "8031:8031"
+      - "8032:8032"
+      - "8033:8033"
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/start-yarn.sh"]
+
+  nodemanager:
+    <<: *hadoop-common
+    build: .
+    container_name: nodemanager
+    hostname: nodemanager
+    volumes:
+      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro
+      - ./scripts/start-nodemanager.sh:/start-nodemanager.sh:ro
+    ports:
+      - "8042:8042"  # NodeManager Web UI
+    depends_on:
+      - resourcemanager
+    command: ["/bin/bash", "/start-nodemanager.sh"]
+
+
 
   airflow:
     build:
@@ -67,16 +215,14 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__FERNET_KEY='d6nNXtWJQL85dCkOTB8FRQ5TPAi6XW7Xbw3l84QJ8q8='
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__PARALLELISM=2
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
     entrypoint: /bin/bash
     command: /init-airflow.sh
     ports:
       - "8081:8080"
     networks:
       - airflow_network
-        
-
-
-

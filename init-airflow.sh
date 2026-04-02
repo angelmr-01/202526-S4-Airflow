@@ -22,8 +22,8 @@ echo "Adding Kafka connection..."
 airflow connections add kafka_default \
     --conn-type kafka \
     --conn-host kafka \
-    --conn-port 29092 \
-    --conn-extra '{"bootstrap.servers": "kafka:29092", "group.id": "airflow-consumer"}' || echo "Connection already exists"
+    --conn-port 9092 \
+    --conn-extra '{"bootstrap.servers": "kafka:9092", "group.id": "airflow-consumer"}' || echo "Connection already exists"
 
 echo "Adding Postgres connection..."
 airflow connections add postgres_default \

@@ -1,0 +1,73 @@
+<configuration>
+    <!-- ResourceManager hostname -->
+    <property>
+        <name>yarn.resourcemanager.hostname</name>
+        <value>resourcemanager</value>
+    </property>
+
+    <!-- ResourceManager client address -->
+    <property>
+        <name>yarn.resourcemanager.address</name>
+        <value>resourcemanager:8032</value>
+    </property>
+
+    <!-- ResourceManager scheduler address -->
+    <property>
+        <name>yarn.resourcemanager.scheduler.address</name>
+        <value>resourcemanager:8030</value>
+    </property>
+
+    <!-- ResourceManager resource tracker address -->
+    <property>
+        <name>yarn.resourcemanager.resource-tracker.address</name>
+        <value>resourcemanager:8031</value>
+    </property>
+
+    <!-- ResourceManager admin address -->
+    <property>
+        <name>yarn.resourcemanager.admin.address</name>
+        <value>resourcemanager:8033</value>
+    </property>
+
+    <!-- YARN Web UI address -->
+    <property>
+        <name>yarn.resourcemanager.webapp.address</name>
+        <value>resourcemanager:8088</value>
+    </property>
+
+    <!-- Auxiliary services for MapReduce shuffle -->
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+
+    <!-- Shuffle handler class -->
+    <property>
+        <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+        <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+    </property>
+
+    <!-- NodeManager memory (2GB) -->
+    <property>
+        <name>yarn.nodemanager.resource.memory-mb</name>
+        <value>2048</value>
+    </property>
+
+    <!-- NodeManager CPU cores -->
+    <property>
+        <name>yarn.nodemanager.resource.cpu-vcores</name>
+        <value>2</value>
+    </property>
+
+    <!-- Disable virtual memory checks -->
+    <property>
+        <name>yarn.nodemanager.vmem-check-enabled</name>
+        <value>false</value>
+    </property>
+
+    <!-- Maximum AM resource percent (50%) -->
+    <property>
+        <name>yarn.scheduler.capacity.maximum-am-resource-percent</name>
+        <value>0.5</value>
+    </property>
+</configuration>

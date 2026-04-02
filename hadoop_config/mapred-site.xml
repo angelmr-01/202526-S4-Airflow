@@ -1,0 +1,31 @@
+<configuration>
+    <!-- Use YARN as the MapReduce framework -->
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+
+    <!-- MapReduce application classpath -->
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>$HADOOP_HOME/share/hadoop/mapreduce/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*</value>
+    </property>
+
+    <!-- Application Master environment -->
+    <property>
+        <name>yarn.app.mapreduce.am.env</name>
+        <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+    </property>
+
+    <!-- Map task environment -->
+    <property>
+        <name>mapreduce.map.env</name>
+        <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+    </property>
+
+    <!-- Reduce task environment -->
+    <property>
+        <name>mapreduce.reduce.env</name>
+        <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+    </property>
+</configuration>

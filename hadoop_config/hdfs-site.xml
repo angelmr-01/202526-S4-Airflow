@@ -1,0 +1,49 @@
+<configuration>
+    <!-- NameNode data storage directory -->
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:///opt/hadoop/data/nameNode</value>
+    </property>
+
+    <!-- DataNode data storage directory -->
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:///opt/hadoop/data/dataNode</value>
+    </property>
+
+    <!-- Replication factor (2 DataNodes available) -->
+    <property>
+        <name>dfs.replication</name>
+        <value>2</value>
+    </property>
+
+    <!-- NameNode RPC address -->
+    <property>
+        <name>dfs.namenode.rpc-address</name>
+        <value>namenode:9000</value>
+    </property>
+
+    <!-- NameNode Web UI address -->
+    <property>
+        <name>dfs.namenode.http-address</name>
+        <value>0.0.0.0:9870</value>
+    </property>
+
+    <!-- Replace DataNode on write failure -->
+    <property>
+        <name>dfs.client.block.write.replace-datanode-on-failure.policy</name>
+        <value>ALWAYS</value>
+    </property>
+
+    <!-- Disable permissions for development environment -->
+    <property>
+        <name>dfs.permissions</name>
+        <value>false</value>
+    </property>
+
+    <!-- Exit safe mode immediately after startup -->
+    <property>
+        <name>dfs.namenode.safemode.extension</name>
+        <value>0</value>
+    </property>
+</configuration>
