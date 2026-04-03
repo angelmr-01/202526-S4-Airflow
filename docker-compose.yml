@@ -161,43 +161,6 @@ services:
       - airflow_network
 
 
-
-  # ==================== HADOOP YARN ====================
-  
-  resourcemanager:
-    <<: *hadoop-common
-    build: .
-    container_name: resourcemanager
-    hostname: resourcemanager
-    volumes:
-      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro
-      - ./scripts/start-yarn.sh:/start-yarn.sh:ro
-    ports:
-      - "8088:8088"  # YARN Web UI
-      - "8030:8030"
-      - "8031:8031"
-      - "8032:8032"
-      - "8033:8033"
-    depends_on:
-      - namenode
-    command: ["/bin/bash", "/start-yarn.sh"]
-
-  nodemanager:
-    <<: *hadoop-common
-    build: .
-    container_name: nodemanager
-    hostname: nodemanager
-    volumes:
-      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro
-      - ./scripts/start-nodemanager.sh:/start-nodemanager.sh:ro
-    ports:
-      - "8042:8042"  # NodeManager Web UI
-    depends_on:
-      - resourcemanager
-    command: ["/bin/bash", "/start-nodemanager.sh"]
-
-
-
   airflow:
     build:
       context: .
