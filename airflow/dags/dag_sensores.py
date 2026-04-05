@@ -87,6 +87,21 @@ def configurar_kafka_connect():
         raise
 
 
+
+def verificar_archivos_hdfs():
+    client = InsecureClient('http://namenode:9870', user='root')
+    try:
+        # Extraemos el listado de ficheros. Si la carpeta no ha sido creada saltará excepción.
+        archivos = client.list('/data/raw/sensor_data')
+        if not archivos:
+            raise ValueError("¡Error! HDFS está vacío, Kafka Connect no ha volcado los archivos.")
+        print(f"Verificación exitosa. HDFS contiene {len(archivos)} archivos.")
+    except Exception as e:
+        raise ValueError(f"Fallo en la validación de archivos: {e}")
+
+
+
+
 # Procesa, limpia y transforma los datos antes de meterlos en la base de datos PostgreSQL
 
 def procesar_datos():
@@ -133,7 +148,7 @@ def procesar_datos():
     
     print(f"Se han procesado y limpiado {len(timestamps_ordenados)} registros únicos. Escribiendo a HDFS...")
     
-    # 4. Escribimos el resultado final en un único archivo CSV en HDFS
+    # Escribimos el resultado final en un único archivo CSV en HDFS
     with client.write(archivo_limpio, encoding='utf-8', overwrite=True) as writer:
         for ts in timestamps_ordenados:
             writer.write(datos_limpios[ts])
@@ -207,7 +222,7 @@ def cargar_csv_a_postgres():
                 tmp_file.write(linea)
         ruta_local_tmp = tmp_file.name
         
-    print("Inyectando datos en PostgreSQL mediante COPY...")
+    print("Inyectando datos en PostgreSQL...")
     
     try:
         # Limpiamos la tabla antes de cargar para evitar errores de clave duplicada 
@@ -233,7 +248,7 @@ def registro_de_consultas():
 
     CONSULTAS = [
         {
-            "titulo": "1. Estado general del piso (diferencia entre habitaciones)",
+            "titulo": "1. Resumen Mensual: Temperatura y Humedad del Salón vs Oficina",
             "sql": """
                 SELECT 
                     EXTRACT(MONTH FROM timestamp) AS mes,
@@ -248,11 +263,11 @@ def registro_de_consultas():
             """,
             "fetch_all": True,
             "limite_mostrar": 12,
-            "plantilla_fila": "   - Mes {0:.0f} | Temp: Sal {1}°C vs Bur {2}°C | Hum: Sal {3}% vs Bur {4}% | CO2 Salón: {5}",
-            "conclusion_final": "-> Conclusión: Muestra la situación base del piso. El Bureau es más cálido en verano, sugiriendo una carga térmica por los equipos informáticos. En noviembre la tendencia se invierte, lo que evidencia que la principal fuente de calor de la vivienda incide directamente sobre el Salón."
+            "plantilla_fila": "   - Mes {0:.0f} | Temp: Salón {1}°C vs Oficina {2}°C | Hum: Salón {3}% vs Oficina {4}% | CO2 Salón: {5}",
+            "conclusion_final": "-> Conclusión: Compara el clima de las dos estancias principales. Se observa que la oficina es la zona más calurosa en verano por el calor que generan los ordenadores, mientras que en invierno el salón se convierte en la habitación más cálida."
         },
         {
-            "titulo": "2. Calidad del aire",
+            "titulo": "2. Calidad del Aire y Ventilación (Correlación Aire-Humedad)",
             "sql": """
                 SELECT 
                     EXTRACT(MONTH FROM timestamp) AS mes,
@@ -264,10 +279,10 @@ def registro_de_consultas():
             "fetch_all": True,
             "limite_mostrar": 12,
             "plantilla_fila": "   - Mes {0:.0f}: Correlación Aire/Humedad de {1}.",
-            "conclusion_final": "-> Conclusión: Indica si la casa ventila bien. En octubre la correlación sube, apuntando a que las ventanas se mantienen cerradas y el aire se estanca. En noviembre, el ambiente se reseca, un efecto típico provocado por la llegada del frío y el uso de climatización interior."
+            "conclusion_final": "-> Conclusión: Mide si la falta de ventilación acumula humedad y hace el aire más pesado. En octubre la correlación sube, apuntando a que las ventanas se mantienen cerradas y el aire se estanca. En noviembre, el ambiente se reseca, un efecto típico provocado por la llegada del frío y el uso de climatización interior."
         },
         {
-            "titulo": "3. Aislamiento térmico del piso",
+            "titulo": "3. Aislamiento Térmico: Diferencia de temperatura durante la noche",
             "sql": """
                 SELECT 
                     EXTRACT(MONTH FROM timestamp) AS mes,
@@ -283,22 +298,24 @@ def registro_de_consultas():
             "conclusion_final": "-> Conclusión: Mide la capacidad de los muros para retener temperatura. Retener tanto calor de noche dificulta el descanso en verano, pero es un indicador de buena eficiencia energética en invierno que permite ahorrar en climatización."
         },
         {
-            "titulo": "4. EL LÍMITE DE TOLERANCIA AL CALOR (Punto de ruptura térmica)",
+            "titulo": "4. Horas de Calor Extremo en la Oficina (> 27ºC)",
             "sql": """
                 SELECT 
-                    ROUND(temperature_exterieur::numeric, 0),
-                    ROUND(AVG(temperature_salon)::numeric, 2)
+                    EXTRACT(MONTH FROM timestamp) AS mes,
+                    -- Cada 15 mins. Dividimos entre 4 para obtener horas reales.
+                    (COUNT(*) / 4.0)::numeric AS horas_criticas_bureau
                 FROM sensor_data 
-                GROUP BY ROUND(temperature_exterieur::numeric, 0)
-                HAVING COUNT(*) > 3
-                ORDER BY AVG(temperature_salon) DESC 
-                LIMIT 1;
+                WHERE temperature_bureau >= 27.0
+                GROUP BY EXTRACT(MONTH FROM timestamp)
+                ORDER BY mes;
             """,
-            "fetch_all": False,
-            "plantilla_conclusion": "Cuando la calle registra {0}°C de forma recurrente, el interior de la vivienda alcanza su récord de calor con una media de {1}°C.\n-> Valor: Identifica el 'Punto de Ruptura' real de la casa, descartando espejismos estadísticos. Descubrir a qué temperatura exterior el piso se vuelve sofocante permite a una empresa anticiparse y lanzar promociones de refrigeración exactamente en la semana que el pronóstico del tiempo anuncie esos grados críticos."
+            "fetch_all": True,
+            "limite_mostrar": 12,
+            "plantilla_fila": "   - Mes {0:.0f}: {1} horas superando los 27ºC debido al calor externo y los ordenadores.",
+            "conclusion_final": "-> Conclusión: Calcula exactamente cuántas horas al mes la oficina es térmicamente incómoda (> 27ºC). Este dato sirve para prever cuánto va a consumir el aire acondicionado portátil."
         },
         {
-            "titulo": "5. Efecto de los ordenadores en el bureau (pérdida de humedad)",
+            "titulo": "5. Efecto de los ordenadores en la oficina (pérdida de humedad)",
             "sql": """
                 WITH ranking_termico AS (
                     SELECT 
@@ -313,7 +330,24 @@ def registro_de_consultas():
                 FROM ranking_termico;
             """,
             "fetch_all": False,
-            "plantilla_conclusion": "Con los equipos en reposo, la diferencia de humedad es del {0}%. Sin embargo, en los momentos de mayor generación de calor, la humedad cae al {1}%.\n-> Valor: Demuestra matemáticamente que los pcs trabajando a alta carga resecan el cuarto, justificando la recomendación de usar humidificadores."
+            "plantilla_conclusion": "Con los equipos en reposo, la diferencia de humedad es del {0}%. Sin embargo, en los momentos de mayor generación de calor, la humedad cae al {1}%.\n-> Conclusión: Demuestra matemáticamente que los pcs trabajando a alta carga resecan el cuarto, justificando la recomendación de usar humidificadores y abrir la puerta."
+        },
+        {
+            "titulo": "6. Detección de Ocupación y Eventos Sociales (Visitas)",
+            "sql": """
+                SELECT 
+                    DATE(timestamp) as dia_evento,
+                    MAX(air_salon) as pico_co2,
+                    ROUND(AVG(temperature_salon)::numeric, 2) as temperatura_media
+                FROM sensor_data
+                GROUP BY DATE(timestamp)
+                ORDER BY pico_co2 DESC
+                LIMIT 5;
+            """,
+            "fetch_all": True,
+            "limite_mostrar": 5,
+            "plantilla_fila": "   - Día {0} | Calidad del aire máxima registrada: {1} | Temp. Media: {2}°C",
+            "conclusion_final": "-> Conclusión: Detecta patrones de saturación atmosférica que apuntan a una sobreocupación temporal (visitas de amigos). Para una plataforma domótica Smart Home, detectar sin cámaras estos picos poblacionales sirve para encender automáticamente purificadores de humo/ambiente."
         }
     ]
 
@@ -346,7 +380,7 @@ def registro_de_consultas():
                 lineas_reporte.append("\n--------------------------------------------------------------\n")
 
     # Guardado del reporte final en el volumen compartido de Airflow
-    ruta_reporte = '/opt/airflow/dags/reporte_ejecutivo_final.txt'
+    ruta_reporte = '/opt/airflow/dags/reporte.txt'
     with open(ruta_reporte, 'w', encoding='utf-8') as archivo:
         archivo.write("\n".join(lineas_reporte))
 
@@ -375,6 +409,16 @@ with DAG(
         }
     )
 
+    tarea_esperar_connect = BashOperator(
+        task_id='esperar_volcado_hdfs',
+        bash_command='sleep 65'
+    )
+
+    tarea_verificar_hdfs = PythonOperator(
+        task_id='verificar_archivos_hdfs',
+        python_callable=verificar_archivos_hdfs
+    )
+
     tarea_procesar_datos = PythonOperator(
         task_id='procesar_datos',
         python_callable=procesar_datos
@@ -399,4 +443,4 @@ with DAG(
 
 
 
-    tarea_configurar_connect >> tarea_producir_mensajes >> tarea_procesar_datos >> tarea_crear_tabla >> tarea_cargar_postgres >> tarea_registro_de_consultas
+    tarea_configurar_connect >> tarea_producir_mensajes >> tarea_esperar_connect >> tarea_verificar_hdfs >> tarea_procesar_datos >> tarea_crear_tabla >> tarea_cargar_postgres >> tarea_registro_de_consultas

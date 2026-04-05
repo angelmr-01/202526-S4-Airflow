@@ -125,13 +125,10 @@ services:
 
   # Nodos de almacenamiento de HDFS
   datanode1:
+    <<: *hadoop-common
     build: .
     container_name: datanode1
     hostname: datanode1
-    user: root
-    environment:
-      - HADOOP_HOME=/opt/hadoop
-      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_datanode1:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -139,17 +136,12 @@ services:
     depends_on:
       - namenode
     command: ["/bin/bash", "/init-datanode.sh"]
-    networks:
-      - airflow_network
 
   datanode2:
+    <<: *hadoop-common
     build: .
     container_name: datanode2
     hostname: datanode2
-    user: root
-    environment:
-      - HADOOP_HOME=/opt/hadoop
-      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_datanode2:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -157,8 +149,6 @@ services:
     depends_on:
       - namenode
     command: ["/bin/bash", "/init-datanode.sh"]
-    networks:
-      - airflow_network
 
 
   airflow:
