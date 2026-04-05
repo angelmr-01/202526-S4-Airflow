@@ -1,6 +1,6 @@
 ==============================================================
       REPORTE GENERADO DE CONSULTAS A LA BASE DE DATOS        
-      Generado el: 2026-04-04 16:36
+      Generado el: 2026-04-05 15:22
 ==============================================================
 
 1. Resumen Mensual: Temperatura y Humedad del Salón vs Oficina
@@ -8,7 +8,7 @@
    - Mes 8 | Temp: Salón 26.63°C vs Oficina 27.50°C | Hum: Salón 55.48% vs Oficina 52.58% | CO2 Salón: 2040
    - Mes 9 | Temp: Salón 24.54°C vs Oficina 25.47°C | Hum: Salón 54.28% vs Oficina 51.21% | CO2 Salón: 1880
    - Mes 10 | Temp: Salón 20.48°C vs Oficina 21.31°C | Hum: Salón 54.65% vs Oficina 51.19% | CO2 Salón: 1977
-   - Mes 11 | Temp: Salón 18.73°C vs Oficina 18.17°C | Hum: Salón 54.49% vs Oficina 53.48% | CO2 Salón: 2142
+   - Mes 11 | Temp: Salón 18.78°C vs Oficina 18.20°C | Hum: Salón 54.61% vs Oficina 53.60% | CO2 Salón: 2144
 -> Conclusión: Compara el clima de las dos estancias principales. Se observa que la oficina es la zona más calurosa en verano por el calor que generan los ordenadores, mientras que en invierno el salón se convierte en la habitación más cálida.
 
 --------------------------------------------------------------
@@ -18,7 +18,7 @@
    - Mes 8: Correlación Aire/Humedad de -0.173.
    - Mes 9: Correlación Aire/Humedad de 0.120.
    - Mes 10: Correlación Aire/Humedad de 0.399.
-   - Mes 11: Correlación Aire/Humedad de 0.263.
+   - Mes 11: Correlación Aire/Humedad de 0.212.
 -> Conclusión: Mide si la falta de ventilación acumula humedad y hace el aire más pesado. En octubre la correlación sube, apuntando a que las ventanas se mantienen cerradas y el aire se estanca. En noviembre, el ambiente se reseca, un efecto típico provocado por la llegada del frío y el uso de climatización interior.
 
 --------------------------------------------------------------
@@ -42,7 +42,7 @@
 --------------------------------------------------------------
 
 5. Efecto de los ordenadores en la oficina (pérdida de humedad)
-Con los equipos en reposo, la diferencia de humedad es del -1.26%. Sin embargo, en los momentos de mayor generación de calor, la humedad cae al -6.51%.
+Con los equipos en reposo, la diferencia de humedad es del -1.27%. Sin embargo, en los momentos de mayor generación de calor, la humedad cae al -6.52%.
 -> Conclusión: Demuestra matemáticamente que los pcs trabajando a alta carga resecan el cuarto, justificando la recomendación de usar humidificadores y abrir la puerta.
 
 --------------------------------------------------------------
